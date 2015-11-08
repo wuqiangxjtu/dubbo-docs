@@ -20,7 +20,7 @@
 #### 建立实体类
 ##### dubbo-demo-api
 
-``` java
+\`\`\` java
 public class Vegetable implements Serializable {
   private static final long serialVersionUID = -2766776078548112038L;
 }
@@ -31,8 +31,28 @@ public class Water implements Serializable {
   private static final long serialVersionUID = -3108169097597662406L;
 }
 
-```
+\`\`\`
 
+#### 新建Service接口
+##### dubbo-demo-api
+\`\`\` java
+
+public interface VegetableService {
+Vegetable wash(Vegetable vegetable);
+Vegetable cook(Vegetable vegetable);
+}
+public interface RiceService {
+Rice wash(Rice rice);
+Rice cook(Rice rice);
+}
+public interface WaterService {
+Water boil(Water water);
+}
+public interface PersonService {
+void eat(Vegetable vegetable, Rice rice, Water water);
+}
+
+\`\`\`
 #### 顺序处理
 传统的方法是逐个依次调用
 
