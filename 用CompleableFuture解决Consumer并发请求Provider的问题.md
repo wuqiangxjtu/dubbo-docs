@@ -21,19 +21,18 @@
 ##### dubbo-demo-api
 
 ``` java
-`
 public class Vegetable implements Serializable {
-private static final long serialVersionUID = -2766776078548112038L;
+  private static final long serialVersionUID = -2766776078548112038L;
 }
 public class Rice implements Serializable {
-private static final long serialVersionUID = 3369278509187557523L;
+  private static final long serialVersionUID = 3369278509187557523L;
 }
 public class Water implements Serializable {
-private static final long serialVersionUID = -3108169097597662406L;
+  private static final long serialVersionUID = -3108169097597662406L;
 }
 
 ```
-`
+
 #### 顺序处理
 传统的方法是逐个依次调用
 
