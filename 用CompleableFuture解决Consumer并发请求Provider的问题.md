@@ -56,6 +56,136 @@ public interface PersonService {
 }
 ```
 
+#### 新建ServiceImpl
+##### dubbo-demo-provider
+```java
+public class VegetableServiceImpl implements VegetableService{
+    
+    public Vegetable wash(Vegetable vegetable) {
+        System.out.println("------->wash vegetable");
+        SleepUtil.sleep(1500);
+        return vegetable;
+    }
+    
+    public Vegetable cook(Vegetable vegetable) {
+        System.out.println("------->cook vegetable");
+        SleepUtil.sleep(1500);
+        return vegetable;
+    }
+}
+
+public class VegetableServiceImpl implements VegetableService{
+    
+    public Vegetable wash(Vegetable vegetable) {
+        System.out.println("------->wash vegetable");
+        SleepUtil.sleep(1500);
+        return vegetable;
+    }
+    
+    public Vegetable cook(Vegetable vegetable) {
+        System.out.println("------->cook vegetable");
+        SleepUtil.sleep(1500);
+        return vegetable;
+    }
+}
+
+public class WaterServiceImpl implements WaterService{
+
+    public Water boil(Water water) {
+        System.out.println("------->boil water");
+        SleepUtil.sleep(1000);
+        return water;
+    }
+}
+
+public class PersonServiceImpl implements PersonService{
+
+    public void eat(Vegetable vegetable, Rice rice, Water water) {
+        System.out.println("------->person eat");
+        SleepUtil.sleep(500);
+    }
+
+}
+```
+
 #### 顺序处理
-传统的方法是逐个依次调用 
+传统的方法是逐个依次调用各个服务接口，如下所示：
+##### dubbo-demo-consumer
+
+```java
+Vegetable vegetable = new Vegetable();
+Rice rice = new Rice();
+Water water = new Water();
+
+System.out.println("------------->serial begin<---------");
+long begin = System.currentTimeMillis();
+vegetableService.wash(vegetable);
+vegetableService.cook(vegetable);
+riceService.wash(rice);
+riceService.cook(rice);
+waterService.boil(water);
+personService.eat(vegetable, rice, water);
+System.out.println("Cost " + (System.currentTimeMillis() - begin) + " millis");
+System.out.println("--------------->serial end<---------");
+```
+从结果可以看出，每个service都是顺序调用的。
+```
+Provider：
+------->wash vegetable
+------->cook vegetable
+------->wash rice
+------->cook rice
+------->boil water
+------->person eat 
+
+Consumer：
+------------->serial begin<---------
+Cost 7786 millis
+--------------->serial end<---------
+```
+如果服务接口非常多，并且有的接口比较耗时，那么整个调用消耗的时间非常长。
+
+#### Future
+可以把服务接口放在Future中执行，Dubbo本身也提供了异步调用的方法[Dubbo异步调用](http://dubbo.io/User+Guide-zh.htm#UserGuide-zh-%E5%BC%82%E6%AD%A5%E8%B0%83%E7%94%A8)。
+具体的代码这里就不再赘述，但是这样做也有一个显著的缺点：`vegetableService.wash`可以异步执行，但是在该方法返回之前，无法调用`vegetableService.cook`方法，也就是说，只有`vegetableService.wash;riceService.wash;waterService.boil`三个方法可以并发执行。
+
+#### CompleableFuture
+CompleableFuture是Java8提供的新功能，提供了类似于Promise的功能。使用CompleableFuture重构过的代码如下：
+```java
+System.out.println("------------->concurrent begin<---------");
+long begin2 = System.currentTimeMillis();
+final CompletableFuture<Vegetable> vegetableFuture = CompletableFuture.supplyAsync(
+        () -> {vegetableService.wash(vegetable); return vegetable;})
+        .thenApply((v)->{vegetableService.cook(v); return v;});
+final CompletableFuture<Rice> riceFuture = CompletableFuture.supplyAsync(
+        () -> {riceService.wash(rice); return rice;})
+        .thenApply((r)->{riceService.cook(r); return r;});
+final CompletableFuture<Water> waterFuture = CompletableFuture.supplyAsync(
+        ()->{waterService.boil(water);return water;});
+personService.eat(vegetableFuture.get(), riceFuture.get(), waterFuture.get());
+System.out.println("Cost " + (System.currentTimeMillis() - begin2) + " millis");
+System.out.println("--------------->concurrent end<---------");
+```
+调用的结果如下，可以看出，每条支线是并发执行的：
+```
+Provider:
+------->wash vegetable
+------->wash rice
+------->boil water
+------->cook rice
+------->cook vegetable
+------->person eat
+
+Consumer:
+------------->concurrent begin<---------
+Cost 3541 millis
+--------------->concurrent end<---------
+```
+
+#### 时间对比
+>顺序执行：Cost 7786 millis
+并发执行：Cost 3541 millis
+
+
+
 
