@@ -21,7 +21,7 @@
 #### 建立实体类
 ##### dubbo-demo-api
 
-``` java
+``` java
 
 public class Vegetable implements Serializable {
   private static final long serialVersionUID = -2766776078548112038L;
@@ -38,7 +38,7 @@ public class Water implements Serializable {
 #### 新建Service接口
 ##### dubbo-demo-api
 
-``` java
+``` java
 
 public interface VegetableService {
 	Vegetable wash(Vegetable vegetable);
