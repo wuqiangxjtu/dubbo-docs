@@ -14,4 +14,4 @@
 #### 顺序处理
 传统的方法是逐个依次调用
 
-[image-1]:	http://git.intra.weibo.com/wuqiang1/dubbo-docs/blob/master/pics/1.png
+[image-1]:	https://github.com/wuqiangxjtu/dubbo-docs/blob/master/pics/1.png
