@@ -10,7 +10,7 @@
 ### 实例
 为了更方便的说明问题，我们可以把上面的问题转换成为我们生活中熟悉的事例。如下图所示：
 
-![图片1](pics/1.png)
+![图片1](http://7xo7zr.com1.z0.glb.clouddn.com/1.png)
 
 吃饭的过程进行如下分解：
 + 做菜：1. 洗菜(wash vegetable)；2. 炒菜(cook vegetable)
@@ -58,6 +58,7 @@ public interface PersonService {
 
 #### 新建ServiceImpl
 ##### dubbo-demo-provider
+
 ```java
 public class VegetableServiceImpl implements VegetableService{
     
@@ -128,7 +129,9 @@ personService.eat(vegetable, rice, water);
 System.out.println("Cost " + (System.currentTimeMillis() - begin) + " millis");
 System.out.println("--------------->serial end<---------");
 ```
+
 从结果可以看出，每个service都是顺序调用的。
+
 ```
 Provider：
 ------->wash vegetable
@@ -143,6 +146,7 @@ Consumer：
 Cost 7786 millis
 --------------->serial end<---------
 ```
+
 如果服务接口非常多，并且有的接口比较耗时，那么整个调用消耗的时间非常长。
 
 #### Future
@@ -151,6 +155,7 @@ Cost 7786 millis
 
 #### CompleableFuture
 CompleableFuture是Java8提供的新功能，提供了类似于Promise的功能。使用CompleableFuture重构过的代码如下：
+
 ```java
 System.out.println("------------->concurrent begin<---------");
 long begin2 = System.currentTimeMillis();
@@ -166,7 +171,9 @@ personService.eat(vegetableFuture.get(), riceFuture.get(), waterFuture.get());
 System.out.println("Cost " + (System.currentTimeMillis() - begin2) + " millis");
 System.out.println("--------------->concurrent end<---------");
 ```
+
 调用的结果如下，可以看出，每条支线是并发执行的：
+
 ```
 Provider:
 ------->wash vegetable
@@ -182,9 +189,11 @@ Cost 3541 millis
 --------------->concurrent end<---------
 ```
 
+
 #### 时间对比
->顺序执行：Cost 7786 millis<br>
-并发执行：Cost 3541 millis
+>顺序执行：Cost 7786 millis
+
+>并发执行：Cost 3541 millis
 
 
 
