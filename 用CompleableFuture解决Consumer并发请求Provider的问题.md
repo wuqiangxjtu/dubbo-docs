@@ -1,3 +1,8 @@
+---
+title: 用CompleableFuture解决Consumer并发请求Provider的问题
+notebook: dubbo
+tags:dubbo
+---
 ## 用CompleableFuture解决Consumer并发请求Provider的问题
 
 ### 问题
@@ -154,7 +159,7 @@ Cost 7786 millis
 具体的代码这里就不再赘述，但是这样做也有一个显著的缺点：`vegetableService.wash`可以异步执行，但是在该方法返回之前，无法调用`vegetableService.cook`方法，也就是说，只有`vegetableService.wash;riceService.wash;waterService.boil`三个方法可以并发执行。
 
 #### CompleableFuture
-CompleableFuture是Java8提供的新功能，提供了类似于Promise的功能。使用CompleableFuture重构过的代码如下：
+CompleableFuture是Java8提供的新功能，使用CompleableFuture重构过的代码如下：
 
 ```java
 System.out.println("------------->concurrent begin<---------");

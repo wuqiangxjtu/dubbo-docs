@@ -1,3 +1,9 @@
+---
+title: Provider启动
+notebook: dubbo
+tags:dubbo
+---
+
 ### Provider启动
 #### 启动container
 container的启动就是调用container的start方法，log4jcontainer的启动没有什么特别，我们重点看一下springcontainer的启动。
