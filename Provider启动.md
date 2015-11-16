@@ -4,9 +4,9 @@ notebook: dubbo
 tags:dubbo
 ---
 
-### Provider启动
+### Provider启动主流程
 #### 启动container
-container的启动就是调用container的start方法，log4jcontainer的启动没有什么特别，我们重点看一下springcontainer的启动。
+container的启动就是调用container的start方法，log4jcontainer的启动没有什么特别，我们重点看一下spring container的启动。
 
 ```java
 public void start() {
@@ -23,17 +23,17 @@ public void start() {
 ClassPathXmlApplicationContext启动容器的时候，因为dubbo扩展了spring的标签，所以会调用DubboNamespaceHandler的中配置的方法。
 
 ```java
-	    registerBeanDefinitionParser("application", new DubboBeanDefinitionParser(ApplicationConfig.class, true));
-        registerBeanDefinitionParser("module", new DubboBeanDefinitionParser(ModuleConfig.class, true));
-        registerBeanDefinitionParser("registry", new DubboBeanDefinitionParser(RegistryConfig.class, true));
-        registerBeanDefinitionParser("monitor", new DubboBeanDefinitionParser(MonitorConfig.class, true));
-        registerBeanDefinitionParser("provider", new DubboBeanDefinitionParser(ProviderConfig.class, true));
-        registerBeanDefinitionParser("consumer", new DubboBeanDefinitionParser(ConsumerConfig.class, true));
-        registerBeanDefinitionParser("protocol", new DubboBeanDefinitionParser(ProtocolConfig.class, true));
-	     //service
-        registerBeanDefinitionParser("service", new DubboBeanDefinitionParser(ServiceBean.class, true));
-        registerBeanDefinitionParser("reference", new DubboBeanDefinitionParser(ReferenceBean.class, false));
-        registerBeanDefinitionParser("annotation", new DubboBeanDefinitionParser(AnnotationBean.class, true));
+registerBeanDefinitionParser("application", new DubboBeanDefinitionParser(ApplicationConfig.class, true));
+registerBeanDefinitionParser("module", new DubboBeanDefinitionParser(ModuleConfig.class, true));
+registerBeanDefinitionParser("registry", new DubboBeanDefinitionParser(RegistryConfig.class, true));
+registerBeanDefinitionParser("monitor", new DubboBeanDefinitionParser(MonitorConfig.class, true));
+registerBeanDefinitionParser("provider", new DubboBeanDefinitionParser(ProviderConfig.class, true));
+registerBeanDefinitionParser("consumer", new DubboBeanDefinitionParser(ConsumerConfig.class, true));
+registerBeanDefinitionParser("protocol", new DubboBeanDefinitionParser(ProtocolConfig.class, true));
+ //service
+registerBeanDefinitionParser("service", new DubboBeanDefinitionParser(ServiceBean.class, true));
+registerBeanDefinitionParser("reference", new DubboBeanDefinitionParser(ReferenceBean.class, false));
+registerBeanDefinitionParser("annotation", new DubboBeanDefinitionParser(AnnotationBean.class, true));
 ```
 
 示例配置了service，所以会调用`DubboBeanDefinitionParser(ServiceBean.class, true)`来解析。
@@ -97,8 +97,10 @@ private static final ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoa
 + **`doExportUrls()`**
 
 #### loadRegistries
-返回Url的List，
++ 通过注册中心的配置，得到注册中心的registryURLs:
 [registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.0&owner=william&pid=12702&registry=zookeeper&timestamp=1437635431172]
++ protocols是通信所使用的协议：例如`[<dubbo:protocol name="dubbo" port="20880" id="dubbo" />]`
++ 随后，对于每个protocol（protocolConfig）都调用一次doExportUrlsFor1Protocol(protocolConfig, registryURLs)
 
 #### doExportUrlsFor1Protocol(protocolConfig, registryURLs)
 + 首先获取host，port
@@ -121,10 +123,162 @@ if (port == null || port == 0) {
 
 例如：ThriftProtocol的默认端口是40880
 
-+ final int defaultPort = ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(name).getDefaultPort()
-getExtension(name)时会发现有两个protocol的wrapper：com.alibaba.dubbo.rpc.protocol.ProtocolListenerWrapper和com.alibaba.dubbo.rpc.protocol.ProtocolFilterWrapper，wrapper有点像装饰模式，可以进行AOP。
++ 拼接URL:dubbo://10.209.79.51:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&dubbo=2.0.0&interface=com.alibaba.dubbo.demo.DemoService&loadbalance=roundrobin&methods=sayHello&owner=wuqiang&pid=56203&side=provider&timeout=10000&timestamp=1447643527460
++ 首先进行本地暴露(exportLocal), 然后进行远程暴露
 
-+ 准备URL
-{methods=sayHello, timestamp=1437656363034, dubbo=2.0.0, application=demo-provider, side=provider, owner=william, pid=12702, interface=com.alibaba.dubbo.demo.DemoService, anyhost=true, loadbalance=roundrobin}
-URL:
-dubbo://10.209.76.72:20880/com.alibaba.dubbo.demo.DemoService
+#### 本地暴露exportLocal
++ URL local = injvm://127.0.0.1/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&dubbo=2.0.0&interface=com.alibaba.dubbo.demo.DemoService&loadbalance=roundrobin&methods=sayHello&owner=wuqiang&pid=56203&side=provider&timeout=10000&timestamp=1447643527460
++ 本地暴露的主要逻辑都在`Exporter<?> exporter = protocol.export(proxyFactory.getInvoker(ref, (Class) interfaceClass, local));`中
+
+#### proxyFactory.getInvoker(ref, (Class)interfaceClass, local)
++ proxyFactory调用的是AdaptiveProxyFactory, 默认情况下，会使用javassistFactory, 外层会使用StubProxyFactoryWrapper进行包装
++ 对于getInvoker操作，StubProxyFactoryWrapper并没有做额外的工作，而是直接调用了javassistFactory.getInvoker
++ javaassistFactory.getInvoker返回了一个AbstractProxyInvoker，invoker表示一个可以被调用的对象，consumer对provider的调用，最终会传递给invoker来执行。
+
+##### JavaassistProxyFactory.getInvoker
++ 首先，根据proxy以及type等信息，生成一个Wrapper，wrapper用来代理所有对proxy的请求。(这里有个疑问，因为wrapper的底层依然要使用动态代理的invoke方法来调用服务端的方法,为什么不直接使用动态代理生成一个对象，而要使用这样一个统一的Wrapper)
++ 返回AbstractProxyInvoker，把调用委托给wrapper执行
+
+```java
+return new AbstractProxyInvoker<T>(proxy, type, url) {
+    @Override
+    protected Object doInvoke(T proxy, String methodName, 
+                              Class<?>[] parameterTypes, 
+                              Object[] arguments) throws Throwable {
+        return wrapper.invokeMethod(proxy, methodName, parameterTypes, arguments);
+    }
+};
+``` 
+
+#### protocol.export
++ 这里的protocol是AdaptiveProtocol
++ 获取到的Protocol的扩展是,`ProtocolFilterWrapper->ProtocolListenerWrapper->InjvmProtocol`
+
+##### ProtocolFilterWrapper.export
++ `protocol.export(buildInvokerChain(invoker, Constants.SERVICE_FILTER_KEY, Constants.PROVIDER));`
++ 首先调用buildInvokerChain构造了一个invoker chain，然后交给了ProtocolListenerWrapper.export
+
+###### buildInvokerChain
+
++ 首先，获取到一个filter数组
+
+```
+com.alibaba.dubbo.rpc.filter.EchoFilter@1a5b6f42, 
+com.alibaba.dubbo.rpc.filter.ClassLoaderFilter@5038d0b5, 
+com.alibaba.dubbo.rpc.filter.GenericFilter@32115b28, 
+com.alibaba.dubbo.rpc.filter.ContextFilter@2ad48653, 
+com.alibaba.dubbo.rpc.protocol.dubbo.filter.TraceFilter@6bb4dd34, 
+com.alibaba.dubbo.rpc.filter.TimeoutFilter@7d9f158f, 
+com.alibaba.dubbo.monitor.support.MonitorFilter@45efd90f, 
+com.alibaba.dubbo.rpc.filter.ExceptionFilter@4b8729ff
+```
+
++ 然后倒序循环处理，先后获取的是ExceptionFilter
++ 把last赋值给next,然后通过调用`filter.invoke(next, invocation);`对next进行包装
++ 所以，可以看作用invoker包装了filter，invoker和next，调用invoker.invoke时，委托filter进行处理，并且把next传递进去
++ 最后返回last
++ 所以最后返回一个invoker, 调用invoke方法时，会依次调用filter，顺序为从echoFilter开始，exceptionFilter结束
+
+##### ProtocolListenerWrapper.export
++ 注册了一个listener，这里暂时不看
++ 调用后续的InjvmProtocol.export
+
+##### InjvmProtocol.export
++ `new InjvmExporter<T>(invoker, invoker.getUrl().getServiceKey(), exporterMap);`包装一个InjvmExporter返回
+
+#### 远程暴露
++ registryURL:[registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&client=curator&dubbo=2.0.0&owner=wuqiang&pid=56203&registry=zookeeper&timestamp=1447643514896]
++ 传入getInvoker: registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&client=curator&dubbo=2.0.0&export=dubbo%3A%2F%2F10.209.79.51%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3Dtrue%26application%3Ddemo-provider%26dubbo%3D2.0.0%26interface%3Dcom.alibaba.dubbo.demo.DemoService%26loadbalance%3Droundrobin%26methods%3DsayHello%26owner%3Dwuqiang%26pid%3D56203%26side%3Dprovider%26timeout%3D10000%26timestamp%3D1447643527460&owner=wuqiang&pid=56203&registry=zookeeper&timestamp=1447643514896
++ getInvoker的过程与本地暴露几乎一致
++ `Exporter<?> exporter = protocol.export(invoker);` 如果是Registry，则走if分支，调用RegistryProtocal的export方法。先调用doLocalExport暴露服务，然后把服务在注册中心中进行注册，然后返回一个包装过的Exporter。
+
+#### protocol.export(invoker)
++ 获取到的Protocol的扩展是,`ProtocolFilterWrapper->ProtocolListenerWrapper->RegistryProtocol->AdaptiveProtocol`
+
+```java
+//ProtocolFilterWrapper
+public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        //如果是协议是Registry，直接调用ProtocolListenerWrapper.export
+        if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
+            return protocol.export(invoker);
+        }
+        return protocol.export(buildInvokerChain(invoker, Constants.SERVICE_FILTER_KEY, Constants.PROVIDER));
+}
+
+//ProtocolListenerWrapper
+public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException { 
+        //如果是协议是Registry，直接调用RegistryProtocol.export
+        if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
+            return protocol.export(invoker);
+        }
+        return new ListenerExporterWrapper<T>(protocol.export(invoker), 
+                Collections.unmodifiableList(ExtensionLoader.getExtensionLoader(ExporterListener.class)
+                        .getActivateExtension(invoker.getUrl(), Constants.EXPORTER_LISTENER_KEY)));
+}
+
+//RegistryProtocol
+public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+    //export invoker, 这里的doLocalExport与前面的本地暴露不同，这里的协议不是injvm的
+    final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
+    //registry provider
+    final Registry registry = getRegistry(originInvoker);
+    final URL registedProviderUrl = getRegistedProviderUrl(originInvoker);
+    registry.register(registedProviderUrl);
+    // 订阅override数据
+    // FIXME 提供者订阅时，会影响同一JVM即暴露服务，又引用同一服务的的场景，因为subscribed以服务名为缓存的key，导致订阅信息覆盖。
+    final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registedProviderUrl);
+    final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl);
+    overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
+    registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
+    //保证每次export都返回一个新的exporter实例
+    return new Exporter<T>() {
+        public Invoker<T> getInvoker() {
+            return exporter.getInvoker();
+        }
+        public void unexport() {
+          try {
+            exporter.unexport();
+          } catch (Throwable t) {
+              logger.warn(t.getMessage(), t);
+            }
+            try {
+              registry.unregister(registedProviderUrl);
+            } catch (Throwable t) {
+              logger.warn(t.getMessage(), t);
+            }
+            try {
+              overrideListeners.remove(overrideSubscribeUrl);
+              registry.unsubscribe(overrideSubscribeUrl, overrideSubscribeListener);
+            } catch (Throwable t) {
+              logger.warn(t.getMessage(), t);
+            }
+        }
+    };
+}
+```
+
+##### doLocalExport
++ AdaptiveProtocol默认调用DubboProtocol进行发布
++ `ProtocolFilterWrapper->ProtocolListenerWrapper`调用过程与本地暴露时相同，直到调用DubboProtocol.export
+
+```java
+@SuppressWarnings("unchecked")
+private <T> ExporterChangeableWrapper<T>  doLocalExport(final Invoker<T> originInvoker){
+    String key = getCacheKey(originInvoker);
+    ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
+    if (exporter == null) {
+        synchronized (bounds) {
+            exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
+            if (exporter == null) {
+                final Invoker<?> invokerDelegete = new InvokerDelegete<T>(originInvoker, getProviderUrl(originInvoker));
+                exporter = new ExporterChangeableWrapper<T>((Exporter<T>)protocol.export(invokerDelegete), originInvoker);
+                bounds.put(key, exporter);
+            }
+        }
+    }
+    return (ExporterChangeableWrapper<T>) exporter;
+}
+```
+
+##### DubboProtocol.export(Invoker<T> invoker)
++ DubboProtocol中有个属性:private ExchangeHandler requestHandler = new ExchangeHandlerAdapter(), 在接到客户端请求之后，会被调用。
