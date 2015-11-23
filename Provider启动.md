@@ -1,7 +1,7 @@
 ---
 title: Provider启动
 notebook: dubbo
-tags:dubbo
+tags:dubbo,dubbo源码
 ---
 
 ### Provider启动主流程
@@ -280,5 +280,5 @@ private <T> ExporterChangeableWrapper<T>  doLocalExport(final Invoker<T> originI
 }
 ```
 
-##### DubboProtocol.export(Invoker<T> invoker)
+##### DubboProtocol.export(Invoker invoker)
 + DubboProtocol中有个属性:private ExchangeHandler requestHandler = new ExchangeHandlerAdapter(), 在接到客户端请求之后，会被调用。
