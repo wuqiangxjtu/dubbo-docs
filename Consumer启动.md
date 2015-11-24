@@ -17,6 +17,7 @@ tags:dubbo源码, dubbo
 调用了getObject()->get()->init()->createProxy()
 
 ##### createProxy
+###### 生成proxy
 + 获取一个Proxy，代理所有的请求。没有直接利用反射，但方式是类似的，通过一个InvokerInvocationHandler的invoke方法代理了所有调用，在InvokerInvocationHandler中，会把请求转发给参数invoker，`invoker.invoke(new RpcInvocation(method, args)).recreate();`。
 
 ```java
@@ -26,7 +27,9 @@ public <T> T getProxy(Invoker<T> invoker, Class<?>[] interfaces) {
 
 ```
 
-+ Invoker是通过`invoker = refprotocol.refer(interfaceClass, url);`语句获取的。refprotocol是DubboProtocol调用refer生成的。`DubboInvoker<T> invoker = new DubboInvoker<T>(serviceType, url, getClients(url), invokers);`
+###### 获取invoker
++ 这里的过程和provider的处理类似，Invoker是通过`invoker = refprotocol.refer(interfaceClass, url);`语句获取的,refprotocol是AdaptiveProtocol，获取到的Protocol的扩展是,`ProtocolFilterWrapper->ProtocolListenerWrapper->DubboProtocol`
++ `DubboInvoker<T> invoker = new DubboInvoker<T>(serviceType, url, getClients(url), invokers);`
 + 请求最终会转发到AbstractInvoker的invoke方法，最后由DubboInvoker的doInvoker(Invocation invocation)方法处理
 
 ##### 共享连接
