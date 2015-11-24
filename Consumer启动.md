@@ -68,7 +68,8 @@ public <T> T getProxy(Invoker<T> invoker, Class<?>[] interfaces) {
 ```java
 (Result) currentClient.request(inv, timeout).get();
 ```
-1. 首先，currentClient是HeaderExchangeChannel，request方法实现如下, 说明见注释
+
++ 首先，currentClient是HeaderExchangeChannel，request方法实现如下, 说明见注释
 
 ```java
 public ResponseFuture request(Object request, int timeout) throws RemotingException {
@@ -100,7 +101,7 @@ public ResponseFuture request(Object request, int timeout) throws RemotingExcept
 
 ```
 
-2. 得到DefaultFuture后，调用get()方法，代码如下, 流程见注释
++ 得到DefaultFuture后，调用get()方法，代码如下, 流程见注释
 
 ```java
 private final Lock                            lock = new ReentrantLock();
@@ -155,11 +156,11 @@ private Object returnFromResponse() throws RemotingException {
 }   
 ```
 
-3. 那么`done.await(timeout, TimeUnit.MILLISECONDS);`是何时得到通知的呢，我们知道，await一般是用signal来通知的。
-+ client发送请求以后，await进入等待状态
-+ 服务端处理request,然后返回response
-+ client的HeaderExchangerHanlder的receive方法被触发，收到的message是Response，所以会调用handleResponse方法`handleResponse(channel, (Response) message);`
-+ HandleResponse调用`DefaultFuture.received(channel, response);`
++ 那么`done.await(timeout, TimeUnit.MILLISECONDS);`是何时得到通知的呢，我们知道，await一般是用signal来通知的。
+	- client发送请求以后，await进入等待状态
+	- 服务端处理request,然后返回response
+	- client的HeaderExchangerHanlder的receive方法被触发，收到的message是Response，所以会调用handleResponse方法`handleResponse(channel, (Response) message);`
+	- HandleResponse调用`DefaultFuture.received(channel, response);`
 
 ```java
 //保存了Future
