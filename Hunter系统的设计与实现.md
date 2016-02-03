@@ -7,17 +7,17 @@
 #### 概述
 如下图所示，是我们需要跟踪的一种常见的情况，有平行的调用，也有嵌套的调用。整个可以看成是一个树形结构，也就是一个跟踪树。图中画的是rpc调用，方法调用也是类似的道理。
 
-![pic](https://github.com/wuqiangxjtu/share/tree/master/pics/4.png)
+![image](https://github.com/wuqiangxjtu/share/tree/master/pics/4.png)
 
 跟踪树也可以表示成下面这种形式：
 
-![pic](https://github.com/wuqiangxjtu/share/tree/master/pics/5.png)
+![image](https://github.com/wuqiangxjtu/share/tree/master/pics/5.png)
 
 对应上图，我们明确一些概念：
 + Trace：我们可以把一个跟踪树看成是一个trace，可以是方法的一系列调用，也可以是服务之间的一系列调用，甚至两者混合。
 + Span：树中的每个节点称为一个Span，根节点被称为root Span。一个Span可能包含多个信息，例如：方法调用开始的信息和方法调用结束的信息，RPC span还会包含来自客户端和服务端两者的信息。如下图所示：
 
-![pic](https://github.com/wuqiangxjtu/share/tree/master/pics/6.png)
+![image](https://github.com/wuqiangxjtu/share/tree/master/pics/6.png)
 
 + annotation：span中的一个点，包含事件名称，时间等信息。前边所谓的一个Span包含多个信息，实际上就是包含多个annotation
 + host: 标识一个服务，包含ip，port，服务名称等信息。对于方法调用来说，一个trace的host是可能是完全一样的
